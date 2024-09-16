@@ -1,0 +1,41 @@
+---
+- name: Run CA generation shell script
+  hosts: rke2_servers
+  become: yes
+  vars:
+    cert_mapping:
+      sewol-work-vm-01.udev.local: worker-01
+      sewol-work-vm-02.udev.local: worker-02
+  roles:
+    - role: ca
+
+- name: Common tasks for all nodes
+  hosts: rke2_cluster
+  any_errors_fatal: true
+  become: true
+  roles:
+    - role: rke2_common
+  serial: 5
+
+- name: Server play
+  hosts: rke2_servers
+  any_errors_fatal: true
+  become: true
+  roles:
+    - role: rke2_server
+  serial: 5
+
+- name: Agent play
+  hosts: rke2_agents
+  any_errors_fatal: true
+  become: true
+  roles:
+    - role: rke2_agent
+  serial: 10
+
+- name: Cluster manifest play
+  hosts: rke2_servers
+  any_errors_fatal: true
+  become: true
+  roles:
+    - role: cluster_manifest

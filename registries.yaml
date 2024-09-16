@@ -1,0 +1,28 @@
+---
+mirrors:
+  docker.io:
+    endpoint:
+      - "https://harbor.csde.caci.com"
+    rewrite:
+      "(.*)": "docker.io/$1"
+  quay.io:
+    endpoint:
+      - "https://harbor.csde.caci.com"
+    rewrite:
+      "(.*)": "quay.io/$1"
+  ghcr.io:
+    endpoint:
+      - "https://harbor.csde.caci.com"
+    rewrite:
+      "(.*)": "ghcr.io/$1"
+configs:
+  "harbor.csde.caci.com:5000":
+    auth:
+      username: ${REGISTRY_USERNAME}  # reference the secret
+      password: ${REGISTRY_PASSWORD} # this is the registry password
+    tls:
+      cert_file: # /etc/rancher/rke2/certs/ca.crt  path to the cert file used to authenticate to the registry
+      key_file: # /etc/rancher/rke2/certs/ca.key path to the key file for the certificate used to authenticate to the registry
+      ca_file: # /root/certs/ca.crt path to the ca file used to verify the registry's certificate
+      insecure_skip_verify: true
+ 

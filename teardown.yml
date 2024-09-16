@@ -1,0 +1,10 @@
+---
+# Deletes all RKE2 Related files and certs Run before running launch.sh
+- name: Common tasks for all nodes
+  hosts: rke2_cluster
+  any_errors_fatal: true
+  become: true
+  roles:
+    - role: cleaner
+  serial: 5
+
