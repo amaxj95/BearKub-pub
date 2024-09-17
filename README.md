@@ -8,7 +8,7 @@ https://harbor.fqdn-control.udev.local <br>
 https://minio.fqdn-control.udev.local <br>
 
 ## Summary
-Airgapped private cluster, modify the inventory/hosts and add your machine IP addresses or FQDN name. This playbook has been modified from original purposes and needs modification to fit your collaborative team efforts. where you see fqdn-control.udev.local replace with your machine udev domain (example.udev.local || example.local.com)
+Baremetal RKE2 deployment playbook. For DevSecOps Engineers to foster a more collaborative development and CloudOps Environment. Comes with a basic RKE2 cluster, argocd, harbor, minio, and prometheus. Airgapped private cluster, modify the inventory/hosts and add your machine IP addresses or FQDN name. This playbook has been modified from original purposes and needs modification to fit your collaborative team efforts. where you see fqdn-control.udev.local replace with your machine udev domain (example.udev.local || example.local.com)
 
 # [Herramientas para el Clúster de CI de DevOps](https://fqdn-control.udev.local) 
 <br>
@@ -20,7 +20,7 @@ https://harbor.fqdn-control.udev.local <br>
 https://minio.fqdn-control.udev.local <br>
 
 ## Resumen
-Clúster privado aislado, modifica el archivo inventory/hosts y agrega las direcciones IP o el nombre FQDN de tus máquinas. Este playbook ha sido modificado de sus propósitos originales y necesita ajustes para adaptarse a los esfuerzos colaborativos de tu equipo. Donde veas fqdn-control.udev.local, reemplázalo por el dominio de tu máquina udev (ejemplo.udev.local || ejemplo.local.com).
+Playbook de despliegue de RKE2 en baremetal. Para Ingenieros de DevSecOps con el fin de fomentar un entorno de desarrollo y CloudOps más colaborativo. Viene con un clúster básico de RKE2, ArgoCD, Harbor, Minio y Prometheus. Clúster privado aislado, modifique el archivo de inventario/hosts y agregue las direcciones IP de sus máquinas o el nombre FQDN. Este playbook ha sido modificado de sus propósitos originales y necesita ajustes para adaptarse a los esfuerzos colaborativos de su equipo. Donde vea fqdn-control.udev.local, reemplace con el dominio udev de su máquina (ejemplo.udev.local || ejemplo.local.com).
 
 ## Manual Installation - Server 
 
