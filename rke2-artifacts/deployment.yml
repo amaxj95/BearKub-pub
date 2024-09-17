@@ -1,0 +1,32 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-homepage
+  namespace: homepage
+  labels: 
+    name: nginx-homepage
+spec:
+  selector:
+    matchLabels:
+      name: nginx-homepage
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: nginx-homepage
+    spec:
+      containers:
+        - name: nginx-homepage
+          image: docker.io/library/nginx:latest
+          ports:
+            - containerPort: 80
+              name: http
+          volumeMounts:
+            - name: config-volume1
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: config-volume1
+          configMap:
+            name: nginx-homepage
