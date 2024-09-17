@@ -54,8 +54,6 @@ data:
       config:
         baseURL: https://your.gitlab.example.com
         # Credentials can be string literals or pulled from the environment.
-        clientID: ca11e6d6d9158063c14302a62226ec588c5ee4b159eb1ec8b9dca32ca1f420b1
-        clientSecret: gloas-bd254420721420ccfbbb19caeb1f5bfd7993ea7dd8ec593f98bc5b00e1d045d2
         redirectURI: https://fqdn-control.udev.local:5556/api/dex/callback
         url: https://argocd.fqdn-control.udev.local
         users.anonymous.enabled: "false"
