@@ -1,0 +1,68 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minio-ingress
+  namespace: minio-dev
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: "websecure"  # Use "websecure" for HTTPS
+    traefik.ingress.kubernetes.io/router.tls: "true"               # Enables HTTPS
+spec:
+  tls:
+    - hosts:
+        - minio.fqdn-control.udev.local
+        - minio1.fqdn-control.udev.local
+        - minio2.fqdn-control.udev.local
+        - minio3.fqdn-control.udev.local
+        - minio4.fqdn-control.udev.local
+      secretName: minio-tls-secret   # Secret for your TLS certificate
+  rules:
+    - host: minio.fqdn-control.udev.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minio-service
+                port:
+                  number: 9000
+    - host: minio1.fqdn-control.udev.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minio-service
+                port:
+                  number: 9000
+    - host: minio2.fqdn-control.udev.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minio-service
+                port:
+                  number: 9000
+    - host: minio3.fqdn-control.udev.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minio-service
+                port:
+                  number: 9000
+    - host: minio4.fqdn-control.udev.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minio-service
+                port:
+                  number: 9000
