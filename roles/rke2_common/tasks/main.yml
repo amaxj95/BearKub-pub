@@ -1,0 +1,141 @@
+---
+- name: Create directory for RKE2 artifacts
+  ansible.builtin.file:
+    path: /root/rke2-artifacts
+    state: directory
+    mode: '0755'
+
+- name: Create necessary directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  loop:
+    - { path: "/mnt/disk1" }
+    - { path: "/mnt/disk2" }
+    - { path: "/mnt/disk3" }
+    - { path: "/mnt/disk4" }
+
+# Add check if directory is already created or not
+#- name: Create directory for default minio
+#  ansible.builtin.file:
+#    path: /etc/default/minio
+#    state: directory
+#    mode: '0755'
+
+- name: Stop fapolicyd service on all nodes
+  ansible.builtin.systemd:
+    name: fapolicyd
+    state: stopped
+    enabled: no
+
+- name: Stop firewalld service on all nodes
+  ansible.builtin.systemd:
+    name: firewalld
+    state: stopped
+    enabled: no
+
+- name: Set SELinux to permissive mode
+  ansible.builtin.command:
+    cmd: setenforce 0
+
+- name: Ensure SELinux is in permissive mode
+  ansible.builtin.shell: |
+    sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
+  when: ansible_selinux.status == "enabled"
+
+- name: Create RKE2 config directory
+  ansible.builtin.file:
+    path: /etc/rancher/rke2
+    state: directory
+    mode: '0755'
+
+- name: Create RKE2 config directory
+  ansible.builtin.file:
+    path: /etc/default/minio
+    state: directory
+    mode: '0755'
+
+- name: Transfer installation files
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+    - { src: "./rke2-artifacts/helm-3.15.3.tar.gz", dest: "/root/rke2-artifacts/helm-3.15.3.tar.gz" }
+    - { src: "./rke2-artifacts/rke2.linux-amd64.tar.gz", dest: "/root/rke2-artifacts/rke2.linux-amd64.tar.gz" }
+    - { src: "./rke2-artifacts/rke2-images.linux-amd64.tar.zst", dest: "/root/rke2-artifacts/rke2-images.linux-amd64.tar.zst" }
+    - { src: "./minio/minio.service", dest: "/usr/lib/systemd/system/minio.service" }
+    - { src: "./minio/minio.env", dest: "/etc/default/minio/minio.env" }
+    - { src: "./minio/minio", dest: "/usr/lib/systemd/system/minio" }
+    - { src: "./rke2-artifacts/sha256sum-amd64.txt", dest: "/root/rke2-artifacts/sha256sum-amd64.txt"}
+    - { src: "./config.yml", dest: "/etc/rancher/rke2/config.yml" }
+    - { src: "./registries.yaml", dest: "/etc/rancher/rke2/registries.yaml"}
+
+- name: Copy install.sh to rke2-artifacts
+  ansible.builtin.copy:
+    src: ./install.sh
+    dest: /root/install.sh
+    mode: '0755'
+
+- name: Create minio-user group
+  ansible.builtin.group:
+    name: minio
+    state: present
+    system: yes
+
+- name: Create minio user
+  ansible.builtin.user:
+    name: minio
+    group: minio
+    system: yes
+    create_home: no
+
+- name: Set ownership of minio directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: minio
+    group: minio
+    recurse: yes
+  loop:
+    - /mnt/disk1
+    - /mnt/disk2
+    - /mnt/disk3
+    - /mnt/disk4
+
+- name: Create minio-user group
+  ansible.builtin.group:
+    name: minio-user
+    state: present
+    system: yes
+
+- name: Create minio-user
+  ansible.builtin.user:
+    name: minio-user
+    group: minio-user
+    system: yes
+    create_home: no
+
+- name: Set ownership of minio directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: minio-user
+    group: minio-user
+    recurse: yes
+  loop:
+    - /mnt/disk1
+    - /mnt/disk2
+    - /mnt/disk3
+    - /mnt/disk4
+
+- name: Make minio executable
+  ansible.builtin.file:
+    path: /usr/lib/systemd/system/minio
+    mode: '0755'
+
+- name: Move minio to /usr/local/bin
+  ansible.builtin.command:
+    cmd: sudo mv /usr/lib/systemd/system/minio /usr/local/bin/

@@ -1,0 +1,118 @@
+---
+- name: Create necessary directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  loop:
+    - { path: "/root/rke2-artifacts/argo_admin" }
+    - { path: "/root/rke2-artifacts/gitlab" }
+    - { path: "/root/rke2-artifacts/minio" }
+    - { path: "/root/rke2-artifacts/nginx" }
+    - { path: "/root/rke2-artifacts/harbor" }
+    - { path: "/root/rke2-artifacts/prometheus" }
+    - { path: "/etc/prometheus" }
+    - { path: "/root/rke2-artifacts/rancher" }
+    - { path: "/root/rke2-artifacts/traefik" }
+    - { path: "/usr/local/share/ca-certificates" }
+    - { path: "/root/data/.minio.sys/tmp" }
+    
+# SECTION MAY NEED REVIEW
+- name: Transfer installation files
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+    - { src: "./argo_admin/install.yaml", dest: "/root/rke2-artifacts/argo_admin/install.yaml" }
+    - { src: "./argo_admin/argocd-linux-amd64", dest: "/root/rke2-artifacts/argo_admin/argocd-linux-amd64" }
+    - { src: "./argo_admin/argocd-cmd-params-cm.yaml", dest: "/root/rke2-artifacts/argo_admin/argocd-cmd-params-cm.yaml" }
+    - { src: "./argo_admin/argocd-ingress.yml", dest: "/root/rke2-artifacts/argo_admin/argocd-ingress.yml" }
+    - { src: "./argo_admin/argocd-cm.yaml", dest: "/root/rke2-artifacts/argo_admin/argocd-cm.yaml" }
+    - { src: "./argo_admin/argo.sh", dest: "/root/rke2-artifacts/argo_admin/argo.sh" }
+    - { src: "./harbor/helm_install.sh", dest: "/root/rke2-artifacts/harbor/helm_install.sh" }
+    - { src: "./rancher/rancher_helm_install.sh", dest: "/root/rke2-artifacts/rancher/rancher_helm_install.sh" }
+    - { src: "./minio/minio-dev.yaml", dest: "/root/rke2-artifacts/minio/minio-dev.yaml" }
+    - { src: "./minio/ingress.yml", dest: "/root/rke2-artifacts/minio/ingress.yml" }
+    - { src: "./nginx/configmap.yml", dest: "/root/rke2-artifacts/nginx/configmap.yml" }
+    - { src: "./nginx/deployment.yml", dest: "/root/rke2-artifacts/nginx/deployment.yml" }
+    - { src: "./nginx/service.yml", dest: "/root/rke2-artifacts/nginx/service.yml" }
+    - { src: "./nginx/ingress.yml", dest: "/root/rke2-artifacts/nginx/ingress.yml" }
+    - { src: "./traefik/deployment.yml", dest: "/root/rke2-artifacts/traefik/deployment.yml" }
+    - { src: "./traefik/service.yml", dest: "/root/rke2-artifacts/traefik/service.yml" }
+    - { src: "./traefik/ingressroute.yml", dest: "/root/rke2-artifacts/traefik/ingressroute.yml" }
+    - { src: "./prometheus/ingress.yml", dest: "/root/rke2-artifacts/prometheus/ingress.yml" }
+    - { src: "./prometheus/prometheus-dev.yml", dest: "/root/rke2-artifacts/prometheus/prometheus-dev.yml" }
+    - { src: "./prometheus/prometheus.yml", dest: "/etc/prometheus/prometheus.yml" }
+
+- name: Set executable permissions for .sh files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    mode: '0755'
+    owner: root
+    group: root
+  loop:
+    - "/root/rke2-artifacts/argo_admin/argo.sh"
+    - "/root/rke2-artifacts/harbor/helm_install.sh"
+
+# Deploy Argocd w/ TLS
+- name: Setup ArgoCD kube resources and generate additional TLS certificates
+  ansible.builtin.shell: |
+    source ~/.bashrc
+    /root/configure.sh
+    kubectl apply -f /root/rke2-artifacts/Traefik/deployment.yml
+    kubectl apply -f /root/rke2-artifacts/Traefik/service.yml
+    kubectl apply -f /root/rke2-artifacts/Traefik/ingressroute.yml
+    /root/rke2-artifacts/argo_admin/argo.sh
+  args:
+    executable: /bin/bash
+
+# Deploy Harbor
+- name: Deploy Harbor and Service w/ TLS
+  ansible.builtin.shell: |
+    source ~/.bashrc
+    /root/rke2-artifacts/harbor/helm_install.sh
+  args:
+    executable: /bin/bash
+
+# Deploy Minio
+- name: Configure Minio w/ TLS
+  ansible.builtin.shell: |
+    source ~/.bashrc
+    sudo chown -R 1000:1000 /mnt/disk1/data
+    sudo chmod -R 755 /mnt/disk1/data
+    kubectl label node fqdn-control.udev.local kubernetes.io/hostname=kubealpha.local --overwrite=true
+    kubectl apply -f /root/rke2-artifacts/minio/minio-dev.yaml
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout public.key -out public.crt -subj "/CN=minio.fqdn-control.udev.local/O=minio.fqdn-control.udev.local"
+    cp public.crt /usr/local/share/ca-certificates/public.crt
+    kubectl create namespace minio-dev || true
+    kubectl create secret generic operator-ca-tls --from-file=/usr/local/share/ca-certificates/public.crt -n minio-dev
+    kubectl apply -n minio-dev -f /root/rke2-artifacts/minio/ingress.yml
+    kubectl create secret tls minio-tls-secret --cert=/etc/rancher/rke2/certs/tls.crt --key=/etc/rancher/rke2/certs/tls.key -n minio-dev
+  args:
+    executable: /bin/bash
+
+# Deploy Prometheus
+- name: Deploy Prometheus and Service w/ TLS
+  ansible.builtin.shell: |
+    source ~/.bashrc
+    kubectl create namespace prometheus
+    kubectl apply --namespace prometheus -f /root/rke2-artifacts/prometheus/prometheus-dev.yml
+    kubectl apply --namespace prometheus -f /root/rke2-artifacts/prometheus/ingress.yml
+    kubectl create secret tls prometheus-tls-secret --cert=/etc/rancher/rke2/certs/tls.crt --key=/etc/rancher/rke2/certs/tls.key --namespace=prometheus
+  args:
+    executable: /bin/bash
+
+# Deploy NGINX homepage
+- name: Deploy homepage (nginx webserver directory) w/ TLS
+  ansible.builtin.shell: |
+    source ~/.bashrc
+    kubectl create namespace homepage
+    kubectl apply --namespace homepage -f /root/rke2-artifacts/nginx/configmap.yml
+    kubectl apply --namespace homepage -f /root/rke2-artifacts/nginx/deployment.yml
+    kubectl apply --namespace homepage -f /root/rke2-artifacts/nginx/service.yml
+    kubectl apply --namespace homepage -f /root/rke2-artifacts/nginx/ingress.yml 
+  args:
+    executable: /bin/bash
+

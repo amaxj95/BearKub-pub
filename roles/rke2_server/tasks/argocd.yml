@@ -1,0 +1,52 @@
+---
+- name: Create argo_admin directory
+  ansible.builtin.file:
+    path: "/root/rke2-artifacts/argo_admin"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Transfer ArgoCD installation files
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+    - { src: "./rke2-artifacts/argo_admin/install.yaml", dest: "/root/rke2-artifacts/argo_admin/install.yaml" }
+    - { src: "./rke2-artifacts/argo_admin/argocd-linux-amd64", dest: "/root/rke2-artifacts/argo_admin/argocd-linux-amd64" }
+    - { src: "./rke2-artifacts/argo_admin/argocd-cmd-params-cm.yaml", dest: "/root/rke2-artifacts/argo_admin/argocd-cmd-params-cm.yaml" }
+    - { src: "./rke2-artifacts/argo_admin/ingress.yaml", dest: "/root/rke2-artifacts/argo_admin/argocd-ingress.yaml" }
+    - { src: "./rke2-artifacts/argo_admin/argocd-cm.yaml", dest: "/root/rke2-artifacts/argo_admin/argocd-cm.yaml" }
+    - { src: "./rke2-artifacts/argo_admin/argo.sh", dest: "/root/rke2-artifacts/argo_admin/argo.sh" }
+    
+- name: Ensure configure.sh is present
+  ansible.builtin.copy:
+    src: ./roles/cluster_manifest/tasks/configure.sh
+    dest: /root/configure.sh
+    mode: '0755'
+    owner: root
+    group: root
+  when: inventory_hostname in groups['rke2_servers'][0]
+
+- name: Run configure.sh
+  ansible.builtin.shell: |
+    source ~/.bashrc
+    /root/configure.sh
+  when: inventory_hostname in groups['rke2_servers'][0]
+
+- include_tasks: roles/rke2_agent/tasks/main.yml
+
+- name: Ensure argocd.sh is present
+  ansible.builtin.copy:
+    src: ./roles/cluster_manifest/tasks/argocd.sh
+    dest: /root/argocd.sh
+    mode: '0755'
+    owner: root
+    group: root
+  when: inventory_hostname in groups['rke2_servers'][0]
+
+- name: Install ArgoCD CLI on server
+  ansible.builtin.shell: |
+    source ~/.bashrc
+    /root/argocd.sh
+  when: inventory_hostname in groups['rke2_servers'][0]

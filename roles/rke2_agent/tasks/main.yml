@@ -1,0 +1,71 @@
+---
+- name: Create kubelet directory
+  file:
+    path: /var/lib/kubelet/
+    state: directory
+
+- name: Fetch certificates and keys from the server
+  fetch:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    flat: yes
+  with_items:
+    - { src: '/root/certs/ca.crt', dest: '/tmp/ca.crt' }
+    - { src: '/root/certs/worker-01.crt', dest: '/tmp/worker-01.crt' }
+    - { src: '/root/certs/worker-02.crt', dest: '/tmp/worker-02.crt' }
+    - { src: '/root/certs/worker-01.key', dest: '/tmp/worker-01.key' }
+    - { src: '/root/certs/worker-02.key', dest: '/tmp/worker-02.key' }
+  delegate_to: "{{ groups['rke2_servers'][0] }}"
+
+- name: Distribute CA certificate to agent nodes
+  copy:
+    src: /tmp/ca.crt
+    dest: /var/lib/kubelet/ca.crt
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['rke2_agents'] }}"
+
+- name: Stop fapolicyd service
+  ansible.builtin.systemd:
+    name: fapolicyd
+    state: stopped
+    enabled: no
+
+- name: Set SELinux to permissive mode
+  ansible.builtin.command:
+    cmd: setenforce 0
+
+- name: Ensure SELinux is in permissive mode
+  ansible.builtin.shell: |
+    sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
+  when: ansible_selinux.status == "enabled"
+
+- name: Run RKE2 install script
+  ansible.builtin.shell: |
+    INSTALL_RKE2_ARTIFACT_PATH=/root/rke2-artifacts sh /root/install.sh
+  args:
+    creates: /usr/local/bin/rke2
+
+- name: Add server line to the beginning of RKE2 config.yaml
+  ansible.builtin.lineinfile:
+    path: /etc/rancher/rke2/config.yaml
+    line: "server: https://{{ hostvars['fqdn-control.udev.local'].control_plane_hostname }}:9345"
+    create: yes
+    insertafter: BOF
+
+- name: Add token line to the beginning of RKE2 config.yaml
+  ansible.builtin.lineinfile:
+    path: /etc/rancher/rke2/config.yaml
+    line: "token: {{ hostvars['fqdn-control.udev.local'].cluster_token }}"
+    create: yes
+    insertafter: "server: https://{{ hostvars['fqdn-control.udev.local'].control_plane_hostname }}:9345"
+
+
+- name: Enable RKE2 agent service
+  ansible.builtin.systemd:
+    name: rke2-agent.service
+    enabled: yes
+
+- name: Start RKE2 agent service
+  ansible.builtin.systemd:
+    name: rke2-agent.service
+    state: started

@@ -1,0 +1,144 @@
+---
+- name: Ensure /root/certs directory exists
+  file:
+    path: /root/certs
+    state: directory
+    mode: '0755'
+
+- name: Ensure /rke2/certs directory exists
+  file:
+    path: /etc/rancher/rke2/certs
+    state: directory
+    mode: '0755'
+
+- name: Copy CA.conf to /root/certs
+  copy:
+    src: ./ca.conf
+    dest: /etc/rancher/rke2/certs/ca.conf
+
+- name: Copy CA.conf to /root/certs
+  copy:
+    src: ./ca.conf
+    dest: /root/certs/ca.conf
+
+- name: Copy CA shell script to /root/certs
+  copy:
+    src: ./ca.sh
+    dest: /root/certs/ca.sh
+    mode: '0755'
+
+- name: Copy registries to cluster nodes
+  copy:
+    src: ./registries.yaml
+    dest: /etc/rancher/rke2/registries.yaml
+    mode: '0755'
+
+- name: Ensure CA.conf file is present
+  stat:
+    path: /root/certs/ca.conf
+  register: ca_conf
+
+- name: Fail if CA.conf is not present
+  fail:
+    msg: "ca.conf file is not found in /root/certs"
+  when: not ca_conf.stat.exists
+
+- name: Execute the CA shell script
+  shell: ./ca.sh
+  args:
+    chdir: /root/certs
+  when: ca_conf.stat.exists
+
+- name: Copy certificates to /etc/rancher/rke2/certs
+  copy:
+    src: /root/certs/
+    dest: /etc/rancher/rke2/certs/
+    owner: root
+    group: root
+    mode: '0644'
+    remote_src: yes
+  when: ca_conf.stat.exists
+# Copy /root/certs to /tmp/certs
+
+- name: check for generated certificates 
+  stat:
+    path: "/root/certs/{{ cert_mapping[item] }}.crt"
+  register: cert_files
+  with_items: "{{ groups['rke2_agents'] }}"
+  failed_when: not cert_files.stat.exists
+
+- name: Create directory on agent nodes for certificates
+  delegate_to: "{{ item }}"
+  shell: mkdir -p /var/lib/kubelet/
+  with_items: "{{ groups['rke2_agents'] }}"
+
+- name: Fetch the CA certificate from the server
+  fetch:
+    src: /root/certs/ca.crt
+    dest: /tmp/ca.crt
+    flat: yes
+
+- name: Distribute CA certificate to agent nodes
+  copy:
+    src: /tmp/ca.crt
+    dest: /var/lib/kubelet/ca.crt
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['rke2_agents'] }}"
+
+- name: Fetch the CA certificate from the server
+  fetch:
+    src: /root/certs/ca.crt
+    dest: /tmp/ca.crt
+    flat: yes
+
+- name: Fetch the worker certificate from the server
+  fetch:
+    src: /root/certs/worker-01.crt
+    dest: /tmp/worker-01.crt
+    flat: yes
+
+- name: Distribute worker certificate to agent nodes
+  copy:
+    src: /tmp/worker-01.crt
+    dest: /var/lib/kubelet/kubelet.crt
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['rke2_agents'] }}"
+
+- name: Fetch the worker2 certificate from the server
+  fetch:
+    src: /root/certs/worker-02.crt
+    dest: /tmp/worker-02.crt
+    flat: yes
+
+- name: Distribute worker2 certificate to agent nodes
+  copy:
+    src: /tmp/worker-02.crt
+    dest: /var/lib/kubelet/kubelet.crt
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['rke2_agents'] }}"
+
+- name: Fetch the worker key from the server
+  fetch:
+    src: /root/certs/worker-01.key
+    dest: /tmp/worker-01.key
+    flat: yes
+
+- name: Distribute worker key to agent nodes
+  copy:
+    src: /tmp/worker-01.key
+    dest: /var/lib/kubelet/kubelet.key
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['rke2_agents'] }}"
+
+- name: Fetch the worker2 key from the server
+  fetch:
+    src: /root/certs/worker-02.key
+    dest: /tmp/worker-02.key
+    flat: yes
+
+- name: Distribute worker2 key to agent nodes
+  copy:
+    src: /tmp/worker-02.key
+    dest: /var/lib/kubelet/kubelet.key
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['rke2_agents'] }}"

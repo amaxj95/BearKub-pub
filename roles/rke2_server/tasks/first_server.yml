@@ -1,0 +1,58 @@
+---
+- name: Run RKE2 install script
+  ansible.builtin.shell: |
+    INSTALL_RKE2_ARTIFACT_PATH=/root/rke2-artifacts sh /root/install.sh
+  args:
+    executable: /bin/bash
+
+- name: Enable RKE2 server
+  ansible.builtin.systemd:
+    name: rke2-server
+    enabled: yes
+
+- name: Start RKE2 server
+  ansible.builtin.systemd:
+    name: rke2-server
+    state: started
+
+- name: Remove existing kubectl if symlink creation fails
+  ansible.builtin.shell: |
+    if ln -s $(find /var/lib/rancher/rke2/data/ -name kubectl) /usr/local/bin/kubectl 2>&1 | grep -q 'File exists'; then
+      rm -f /usr/local/bin/kubectl
+    fi
+  args:
+    executable: /bin/bash
+  ignore_errors: yes
+
+- name: Create symlink for kubectl
+  ansible.builtin.shell: |
+    ln -s $(find /var/lib/rancher/rke2/data/ -name kubectl) /usr/local/bin/kubectl
+  args:
+    executable: /bin/bash
+  ignore_errors: yes
+
+- name: Update .bashrc with KUBECONFIG and PATH
+  ansible.builtin.lineinfile:
+    path: ~/.bashrc
+    line: 'export KUBECONFIG=/etc/rancher/rke2/rke2.yaml PATH=$PATH:/usr/local/bin/:/var/lib/rancher/rke2/bin/'
+    state: present
+    create: yes
+
+- name: Source .bashrc
+  ansible.builtin.shell: |
+    source ~/.bashrc
+  args:
+    executable: /bin/bash
+
+- name: Set control plane IP fact
+  ansible.builtin.set_fact:
+    control_plane_ip: "{{ ansible_default_ipv4.address }}"
+
+- name: Read the cluster token
+  ansible.builtin.slurp:
+    src: /var/lib/rancher/rke2/server/token
+  register: token_file
+
+- name: Set token fact
+  ansible.builtin.set_fact:
+    cluster_token: "{{ token_file.content | b64decode }}"
