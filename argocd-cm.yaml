@@ -1,0 +1,61 @@
+# Modify and edit this configmap for use with LDAP, IAM, and Active Directory
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  labels:
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # add an additional local user with apiKey and login capabilities
+  #   apiKey - allows generating API keys
+  #   login - allows to login using UI
+  accounts.admin: apiKey, login
+  accounts.garns: apiKey, login
+  custom-banner.html: |
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            .banner {
+                width: 100%;
+                background-color: green;
+                color: white;
+                font-size: large;
+                text-align: center;
+                padding: 10px 0;
+                position: fixed;
+                top: 0;
+                left: 0;
+                z-index: 1000;
+            }
+            body {
+                padding-top: 50px; /* Adjust based on banner height */
+            }
+        </style>
+    </head>
+    <body>
+        <div class="banner">
+            This system may contain CUI. CUI Supporting Projects are not permitted to use Gitlab DUO features
+        </div>
+    </body>
+    </html>
+  # disables user. User is enabled by default
+  # accounts.alice.enabled: "false" 
+  dex.config: |
+    connectors:
+    - type: gitlab
+      # Required field for connector id.
+      id: gitlab
+      # Required field for connector name.
+      name: GitLab
+      config:
+        baseURL: https://your.gitlab.example.com
+        # Credentials can be string literals or pulled from the environment.
+        clientID: ca11e6d6d9158063c14302a62226ec588c5ee4b159eb1ec8b9dca32ca1f420b1
+        clientSecret: gloas-bd254420721420ccfbbb19caeb1f5bfd7993ea7dd8ec593f98bc5b00e1d045d2
+        redirectURI: https://fqdn-control.udev.local:5556/api/dex/callback
+        url: https://argocd.fqdn-control.udev.local
+        users.anonymous.enabled: "false"
