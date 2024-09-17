@@ -1,5 +1,7 @@
 # [DevOps CI Cluster Tools](https://fqdn-control.udev.local) 
 <br>
+Requirements, 3 VM's, a DNS server and already setup endpoints for the pods. It's also possible to just use localhost:80 but for organization purposes, its recommended to set up your DNS similar to the following:<br> 
+
 https://prometheus.fqdn-control.udev.local <br>
 https://argocd.fqdn-control.udev.local <br>
 https://harbor.fqdn-control.udev.local <br> 
@@ -7,6 +9,15 @@ https://minio.fqdn-control.udev.local <br>
 
 ## Summary
 Airgapped private cluster, modify the inventory/hosts and add your machine IP addresses or FQDN name. This playbook has been modified from original purposes and needs modification to fit your collaborative team efforts. where you see fqdn-control.udev.local replace with your machine udev domain (example.udev.local || example.local.com)
+
+# [Herramientas para el Clúster de CI de DevOps](https://fqdn-control.udev.local) 
+<br>
+Requisitos: 3 máquinas virtuales, un servidor DNS y puntos finales ya configurados para los pods. También es posible usar localhost:80, pero por motivos de organización, se recomienda configurar tu DNS de manera similar a lo siguiente:<br>
+
+https://prometheus.fqdn-control.udev.local <br>
+https://argocd.fqdn-control.udev.local <br>
+https://harbor.fqdn-control.udev.local <br>
+https://minio.fqdn-control.udev.local <br>
 
 ## Resumen
 Clúster privado aislado, modifica el archivo inventory/hosts y agrega las direcciones IP o el nombre FQDN de tus máquinas. Este playbook ha sido modificado de sus propósitos originales y necesita ajustes para adaptarse a los esfuerzos colaborativos de tu equipo. Donde veas fqdn-control.udev.local, reemplázalo por el dominio de tu máquina udev (ejemplo.udev.local || ejemplo.local.com).
